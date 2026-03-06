@@ -1,0 +1,217 @@
+name: PR Automation - Agent Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'GitHub issue number to fix'
+        required: true
+        type: string
+      branch_name:
+        description: 'Feature branch name (auto-generated if empty)'
+        required: false
+        type: string
+
+jobs:
+  fetch-and-process:
+    name: Fetch Issue & Create PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN || github.token }}
+          fetch-depth: 0
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+          cache: 'gradle'
+
+      - name: Grant execute permissions
+        run: |
+          chmod +x gradlew
+          chmod +x generate-reports.sh
+          chmod +x scripts/*.sh 2>/dev/null || true
+
+      - name: Install GitHub CLI
+        run: |
+          type gh >/dev/null 2>&1 || {
+            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+            sudo apt update
+            sudo apt install gh -y
+          }
+
+      - name: Fetch issue details
+        id: fetch_issue
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
+        run: |
+          echo "Fetching issue #${{ github.event.inputs.issue_number }}"
+          
+          ISSUE_TITLE=$(gh issue view ${{ github.event.inputs.issue_number }} --json title -q .title)
+          ISSUE_BODY=$(gh issue view ${{ github.event.inputs.issue_number }} --json body -q .body)
+          ISSUE_LABELS=$(gh issue view ${{ github.event.inputs.issue_number }} --json labels -q '.labels[].name' | tr '\n' ',' | sed 's/,$//')
+          
+          echo "title=$ISSUE_TITLE" >> $GITHUB_OUTPUT
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "$ISSUE_BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "labels=$ISSUE_LABELS" >> $GITHUB_OUTPUT
+          
+          # Generate branch name
+          if [ -z "${{ github.event.inputs.branch_name }}" ]; then
+            BRANCH_NAME="agent/issue-${{ github.event.inputs.issue_number }}-$(echo $ISSUE_TITLE | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | cut -c1-30)"
+          else
+            BRANCH_NAME="${{ github.event.inputs.branch_name }}"
+          fi
+          echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          
+          echo "✅ Issue fetched: $ISSUE_TITLE"
+          echo "📋 Labels: $ISSUE_LABELS"
+          echo "🌿 Branch: $BRANCH_NAME"
+
+      - name: Create feature branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b ${{ steps.fetch_issue.outputs.branch }}
+          echo "✅ Created branch: ${{ steps.fetch_issue.outputs.branch }}"
+
+      - name: Run tests before changes
+        id: test_before
+        run: |
+          echo "Running tests to establish baseline..."
+          ./gradlew clean testDebugUnitTest jacocoTestReport || echo "baseline_failed=true" >> $GITHUB_OUTPUT
+
+      - name: Apply fixes (placeholder - integrate your fix logic here)
+        run: |
+          echo "🔧 Applying fixes for issue #${{ github.event.inputs.issue_number }}"
+          echo "Issue Title: ${{ steps.fetch_issue.outputs.title }}"
+          echo "Labels: ${{ steps.fetch_issue.outputs.labels }}"
+          
+          # TODO: Integrate MCP server or AI agent logic here
+          # Example: python scripts/mcp-integration.py --issue ${{ github.event.inputs.issue_number }}
+          
+          echo "✅ Fixes applied (placeholder)"
+
+      - name: Run tests after changes
+        id: test_after
+        run: |
+          echo "Running tests to validate changes..."
+          ./gradlew clean testDebugUnitTest jacocoTestReport
+          ./generate-reports.sh
+
+      - name: Check test results
+        run: |
+          if [ -f "app/build/reports/jacoco/jacocoTestReport/html/index.html" ]; then
+            echo "✅ Tests passed with coverage report"
+          else
+            echo "❌ Tests failed or no coverage report"
+            exit 1
+          fi
+
+      - name: Commit changes
+        run: |
+          git add .
+          git diff --cached --quiet || {
+            git commit -m "fix: Resolve issue #${{ github.event.inputs.issue_number }} - ${{ steps.fetch_issue.outputs.title }}
+
+Automated fix by GitHub Actions agent.
+
+Closes #${{ github.event.inputs.issue_number }}"
+            echo "✅ Changes committed"
+          }
+
+      - name: Push feature branch
+        run: |
+          git push origin ${{ steps.fetch_issue.outputs.branch }}
+          echo "✅ Branch pushed to origin"
+
+      - name: Create Pull Request
+        id: create_pr
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
+        run: |
+          # Generate PR body with test results
+          PR_BODY=$(cat <<EOF
+## 🤖 Automated Fix for Issue #${{ github.event.inputs.issue_number }}
+
+### 📋 Issue Details
+**Title**: ${{ steps.fetch_issue.outputs.title }}
+**Labels**: ${{ steps.fetch_issue.outputs.labels }}
+
+### 🔧 Changes Made
+This PR contains automated fixes generated by the CI/CD agent.
+
+### ✅ Test Results
+- All unit tests passed
+- Code coverage report generated
+- Instrumentation tests pending
+
+### 📊 Reports
+Test reports and coverage data are attached as artifacts in the workflow run.
+
+### 🔍 Review Checklist
+- [ ] Code changes reviewed
+- [ ] Tests are comprehensive
+- [ ] Documentation updated if needed
+- [ ] No breaking changes
+
+---
+**Generated by**: GitHub Actions Agent
+**Workflow Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+EOF
+          )
+          
+          gh pr create \
+            --title "🤖 Fix: ${{ steps.fetch_issue.outputs.title }}" \
+            --body "$PR_BODY" \
+            --base main \
+            --head ${{ steps.fetch_issue.outputs.branch }} \
+            --label "automated,needs-review" \
+            --draft
+          
+          PR_NUMBER=$(gh pr list --head ${{ steps.fetch_issue.outputs.branch }} --json number -q '.[0].number')
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          echo "✅ Draft PR created: #$PR_NUMBER"
+
+      - name: Upload test reports to PR
+        if: steps.create_pr.outputs.pr_number
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-${{ steps.create_pr.outputs.pr_number }}-test-reports
+          path: |
+            app/build/reports/
+            build/reports/
+
+      - name: Comment on PR with reports
+        if: steps.create_pr.outputs.pr_number
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
+        run: |
+          gh pr comment ${{ steps.create_pr.outputs.pr_number }} --body "## 📊 Automated Test Reports
+
+**Status**: ✅ All tests passed
+
+### 📈 Coverage Summary
+Coverage reports are available in the workflow artifacts.
+
+### 🔗 Links
+- [Workflow Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+- [Test Reports Artifact](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+**Ready for review!** This is a draft PR - please review and approve before merging."
+
+      - name: Link PR to issue
+        if: steps.create_pr.outputs.pr_number
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
+        run: |
+          gh issue comment ${{ github.event.inputs.issue_number }} --body "🤖 Automated fix in progress: #${{ steps.create_pr.outputs.pr_number }}"
+

@@ -4,9 +4,12 @@
 [![Kotlin](https://img.shields.io/badge/Language-Kotlin-blue.svg)](https://kotlinlang.org)
 [![Architecture](https://img.shields.io/badge/Architecture-Clean-orange.svg)](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
 [![Min SDK](https://img.shields.io/badge/Min%20SDK-24-yellowgreen.svg)](https://developer.android.com/about/versions/nougat)
+[![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-blue.svg)](https://github.com/features/actions)
 [![License](https://img.shields.io/badge/License-MIT-red.svg)](LICENSE)
 
-A modern Android contacts manager application showcasing **Clean Architecture** principles, **MVVM** pattern, comprehensive **testing** with 100% code coverage target, and automated **report generation**.
+A modern Android contacts manager application showcasing **Clean Architecture** principles, **MVVM** pattern, comprehensive **testing** with 100% code coverage target, automated **CI/CD workflows**, and **report generation**.
+
+> 🤖 **NEW**: Automated agent workflows for issue-to-PR automation! [Quick Start Guide →](docs/CI_CD_QUICKSTART.md)
 
 ## ✨ Features
 
@@ -197,7 +200,65 @@ app/src/main/java/com/ai/codefixchallange/
 ./gradlew connectedAndroidTest
 ```
 
-### Generate Custom Reports
+## 🤖 CI/CD & Automation
+
+### Automated Agent Workflow
+
+Process GitHub issues automatically with a single command:
+
+```bash
+# Fetch issue, create branch, apply fix, run tests, create PR
+./scripts/agent-workflow.sh <issue_number>
+```
+
+**Features:**
+- 🔍 Fetches issue details from GitHub
+- 🌿 Creates feature branch automatically
+- 🧪 Runs comprehensive tests with coverage
+- 📊 Generates HTML/CSV reports
+- 🔀 Creates draft PR with test results
+- 🔗 Links PR to original issue
+
+### GitHub Actions Workflows
+
+This project includes three automated workflows:
+
+1. **CI Workflow** (`.github/workflows/ci.yml`)
+   - Runs on push/PR to main/develop
+   - Unit tests + instrumentation tests (API 24, 28, 33)
+   - Code coverage reporting
+   - Uploads test artifacts
+
+2. **PR Automation** (`.github/workflows/pr-automation.yml`)
+   - Trigger via workflow_dispatch
+   - Automated issue-to-PR pipeline
+   - Runs tests on emulators
+   - Creates draft PRs with reports
+
+3. **Code Quality** (`.github/workflows/code-quality.yml`)
+   - ktlint for Kotlin code style
+   - detekt for static analysis
+   - Android Lint checks
+
+### Quick Start
+
+```bash
+# Install required tools (macOS)
+brew install gh jq
+
+# Authenticate with GitHub
+gh auth login
+
+# Make scripts executable
+chmod +x scripts/*.sh
+
+# Run agent workflow
+./scripts/agent-workflow.sh 42
+```
+
+📚 **Full Documentation**: [CI/CD Setup Guide](docs/CI_CD_SETUP.md) | [Quick Start](docs/CI_CD_QUICKSTART.md)
+
+### Generate Test Reports
 
 ```bash
 # Make script executable

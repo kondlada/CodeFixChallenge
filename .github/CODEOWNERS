@@ -1,0 +1,33 @@
+# CODEOWNERS - Automatic PR review assignment
+# Each line is a file pattern followed by one or more owners
+
+# Global owners - will be requested for review on all PRs
+* @kondlada
+
+# Presentation layer
+/app/src/main/java/com/ai/codefixchallange/presentation/ @kondlada
+
+# Domain layer - business logic changes need careful review
+/app/src/main/java/com/ai/codefixchallange/domain/ @kondlada
+
+# Data layer
+/app/src/main/java/com/ai/codefixchallange/data/ @kondlada
+
+# Testing - test changes
+/app/src/test/ @kondlada
+/app/src/androidTest/ @kondlada
+
+# Build configuration
+*.gradle.kts @kondlada
+gradle/ @kondlada
+
+# CI/CD workflows
+/.github/workflows/ @kondlada
+
+# Documentation
+/docs/ @kondlada
+*.md @kondlada
+
+# Scripts
+/scripts/ @kondlada
+

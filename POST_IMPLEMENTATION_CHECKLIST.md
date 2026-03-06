@@ -104,6 +104,111 @@ git push origin main
 
 ---
 
+## 🤖 Step 2.6: MCP Server & Intelligent Agent Setup (NEW!)
+
+### What is This?
+
+A complete automation system that:
+- ✅ Fetches GitHub issues automatically
+- ✅ Analyzes your codebase
+- ✅ Creates feature branches
+- ✅ Runs tests on emulators/devices
+- ✅ Creates draft PRs with full details
+- ✅ Links PRs to issues
+
+### Quick Setup
+
+```bash
+cd /Users/karthikkondlada/AndroidStudioProjects/CodeFixChallange
+
+# Install MCP server dependencies
+cd mcp-server
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+deactivate
+
+# Install agent dependencies
+cd ../agent
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+deactivate
+
+# Make scripts executable
+chmod +x scripts/start-agent.sh
+
+# Test it!
+./scripts/start-agent.sh 1
+```
+
+### What Gets Created
+
+```
+mcp-server/
+├── github_mcp_server.py    ✅ Created - REST API server
+├── requirements.txt         ✅ Created - Dependencies
+├── README.md               ✅ Created - Complete docs
+└── __init__.py             ✅ Created
+
+agent/
+├── intelligent_agent.py    ✅ Created - Workflow orchestrator
+├── requirements.txt         ✅ Created - Dependencies
+└── __init__.py             ✅ Created
+
+scripts/
+└── start-agent.sh          ✅ Created - Startup script
+```
+
+### Usage
+
+**Complete automation for issue #42:**
+```bash
+./scripts/start-agent.sh 42
+```
+
+**What it does:**
+1. Starts MCP server (port 8000)
+2. Fetches issue from GitHub
+3. Analyzes codebase
+4. Creates feature branch
+5. Prompts you to apply fixes
+6. Runs all tests
+7. Commits & pushes
+8. Creates draft PR
+9. Cleans up
+
+### Manual Testing
+
+**Start MCP server only:**
+```bash
+cd mcp-server
+source venv/bin/activate
+python github_mcp_server.py
+# Server runs on http://localhost:8000
+```
+
+**Test server:**
+```bash
+curl http://localhost:8000/health
+curl http://localhost:8000/tools
+```
+
+**Run agent separately:**
+```bash
+cd agent
+source venv/bin/activate
+python intelligent_agent.py --issue 42
+```
+
+### Documentation
+
+Complete documentation available at: `mcp-server/README.md`
+
+✅ **Status**: ⬜ Not Done | ⬜ Done
+
+---
+
 ## Step 3: Local Environment Setup ⏳
 
 ### 3.1 Install Required Tools

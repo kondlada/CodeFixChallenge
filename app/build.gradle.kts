@@ -36,11 +36,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
     buildFeatures {
         compose = true
@@ -52,6 +52,21 @@ android {
             isReturnDefaultValues = true
         }
     }
+
+ /*   packagingOptions {
+        resources.excludes.addAll(listOf(
+            "META-INF/LICENSE.md",
+            "META-INF/LICENSE",
+            "META-INF/NOTICE.md",
+            "META-INF/NOTICE",
+            "META-INF/DEPENDENCIES",
+            "META-INF/ASL2.0"
+        ))
+    }*/
+}
+
+hilt {
+    enableAggregatingTask = false
 }
 
 dependencies {
@@ -72,6 +87,9 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
+
+    // JavaPoet - compatible version for Hilt 2.48
+    implementation(libs.javapoet)
 
     // Navigation
     implementation(libs.androidx.navigation.fragment.ktx)
@@ -140,10 +158,10 @@ tasks.register<JacocoReport>("jacocoTestReport") {
         "**/*_MembersInjector.class"
     )
 
-    val javaTree = fileTree("${buildDir}/intermediates/javac/debug") {
+    val javaTree = fileTree("${layout.buildDirectory.get()}/intermediates/javac/debug") {
         exclude(fileFilter)
     }
-    val kotlinTree = fileTree("${buildDir}/tmp/kotlin-classes/debug") {
+    val kotlinTree = fileTree("${layout.buildDirectory.get()}/tmp/kotlin-classes/debug") {
         exclude(fileFilter)
     }
 
@@ -152,7 +170,7 @@ tasks.register<JacocoReport>("jacocoTestReport") {
         "${project.projectDir}/src/main/java",
         "${project.projectDir}/src/main/kotlin"
     )))
-    executionData.setFrom(fileTree(buildDir) {
+    executionData.setFrom(fileTree(layout.buildDirectory) {
         include(listOf(
             "jacoco/testDebugUnitTest.exec",
             "outputs/code_coverage/debugAndroidTest/connected/*coverage.ec"

@@ -53,8 +53,14 @@ echo ""
 echo "📸 PHASE 2: Capturing BEFORE Screenshot"
 echo "========================================"
 
-./scripts/screenshot-capture.sh before $ISSUE_NUMBER $DEVICE
-echo "✅ Before screenshot captured"
+# Check if before screenshot already exists (multiple runs)
+if [ -f "screenshots/issue-$ISSUE_NUMBER/before-fix.png" ]; then
+    echo "ℹ️  Before screenshot already exists (skipping)"
+    echo "   Location: screenshots/issue-$ISSUE_NUMBER/before-fix.png"
+else
+    ./scripts/screenshot-capture.sh before $ISSUE_NUMBER $DEVICE
+    echo "✅ Before screenshot captured"
+fi
 echo ""
 
 #=====================================================
@@ -63,18 +69,37 @@ echo ""
 echo "🔧 PHASE 3: Analyzing and Applying Fix"
 echo "========================================"
 
-python3 agent/intelligent_agent.py \
-    --issue /tmp/agent-workflow/issue_data.json \
-    --mode auto \
-    > /tmp/agent-workflow/fix_log.txt 2>&1
-
-if [ $? -eq 0 ]; then
-    echo "✅ Fix applied successfully"
+# Check if this is a re-run (code already fixed)
+if git diff --quiet HEAD 2>/dev/null; then
+    echo "ℹ️  No code changes detected (may be a re-run)"
+    echo "   Proceeding to build and test..."
 else
-    echo "⚠️  Fix application had issues, continuing..."
-fi
+    echo "Analyzing issue and generating fix recommendations..."
+    echo ""
 
-cat /tmp/agent-workflow/fix_log.txt | tail -10
+    # Use simple fix agent
+    python3 scripts/simple-fix-agent.py \
+        --issue /tmp/agent-workflow/issue_data.json \
+        --mode auto \
+        2>&1 | tee /tmp/agent-workflow/fix_log.txt
+
+    FIX_RESULT=${PIPESTATUS[0]}
+
+    echo ""
+    if [ $FIX_RESULT -eq 0 ]; then
+        echo "✅ Fix analysis complete"
+        echo ""
+        echo "📝 Next Steps:"
+        echo "   1. Review the suggested fixes above"
+        echo "   2. Apply changes to the codebase manually if needed"
+        echo "   3. Re-run this script to build, test, and deploy"
+        echo ""
+        echo "   Or press Enter to continue with current code..."
+        read -t 10 || echo ""
+    else
+        echo "⚠️  Fix analysis completed with notes"
+    fi
+fi
 echo ""
 
 #=====================================================
@@ -236,14 +261,18 @@ echo ""
 echo "📤 PHASE 9: Publishing to GitHub"
 echo "================================="
 
-# Commit all changes
-git add screenshots/issue-$ISSUE_NUMBER/
+# Check if there are changes to commit
+git add screenshots/issue-$ISSUE_NUMBER/ 2>/dev/null || true
 git add automation-results/ 2>/dev/null || true
 git add app/ 2>/dev/null || true
 
-CHANGED_FILES=$(git diff --cached --name-only | head -10 | tr '\n' ', ')
+if git diff --cached --quiet; then
+    echo "ℹ️  No new changes to commit (may be a re-run)"
+    echo "   Previous changes already pushed"
+else
+    CHANGED_FILES=$(git diff --cached --name-only | head -10 | tr '\n' ', ')
 
-git commit -m "fix: Resolve issue #$ISSUE_NUMBER - $ISSUE_TITLE
+    git commit -m "fix: Resolve issue #$ISSUE_NUMBER - $ISSUE_TITLE
 
 Automated fix applied by agent workflow.
 
@@ -266,12 +295,13 @@ Automated fix applied by agent workflow.
 ## Files Changed
 $CHANGED_FILES
 
-Closes #$ISSUE_NUMBER" 2>&1 || echo "Nothing to commit"
+Closes #$ISSUE_NUMBER"
 
-echo "Pushing to GitHub..."
-git push origin HEAD:main 2>&1 | tail -5
+    echo "Pushing to GitHub..."
+    git push origin HEAD:main 2>&1 | tail -5
 
-echo "✅ Pushed to GitHub"
+    echo "✅ Pushed to GitHub"
+fi
 echo ""
 
 #=====================================================

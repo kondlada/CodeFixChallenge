@@ -27,9 +27,10 @@ class ContactDataSource @Inject constructor(
      * @return true if permission is granted, false otherwise
      */
     fun hasContactPermission(): Boolean {
-        // This will be checked from Fragment/Activity level
-        // For now return false to indicate permission check needed
-        return false
+        return ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.READ_CONTACTS
+        ) == PackageManager.PERMISSION_GRANTED
     }
 
     /**

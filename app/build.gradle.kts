@@ -46,7 +46,7 @@ android {
         viewBinding = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.10"  // Compatible with Kotlin 1.9.22
+        kotlinCompilerExtensionVersion = "1.5.14"
     }
     testOptions {
         unitTests {
@@ -54,10 +54,12 @@ android {
             isReturnDefaultValues = true
         }
     }
-}
-
-hilt {
-    enableAggregatingTask = false
+    @Suppress("DEPRECATION")
+    packagingOptions.excludes += setOf(
+        "/META-INF/{AL2.0,LGPL2.1}",
+        "/META-INF/LICENSE.md",
+        "/META-INF/LICENSE-notice.md"
+    )
 }
 
 
@@ -79,9 +81,6 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
-
-    // JavaPoet - compatible version for Hilt 2.48
-    implementation(libs.javapoet)
 
     // Navigation
     implementation(libs.androidx.navigation.fragment.ktx)

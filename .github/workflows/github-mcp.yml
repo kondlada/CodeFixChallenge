@@ -1,0 +1,159 @@
+name: GitHub MCP - Issue Processing
+
+# This acts as MCP (Model Context Protocol) server for issue management
+# Triggered by issues and provides structured data for agents
+
+on:
+  issues:
+    types: [opened, reopened, labeled]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to process'
+        required: true
+        type: number
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  mcp-process-issue:
+    name: MCP - Process and Structure Issue Data
+    runs-on: ubuntu-latest
+
+    outputs:
+      issue_data: ${{ steps.structure.outputs.issue_data }}
+      can_automate: ${{ steps.analyze.outputs.can_automate }}
+      component: ${{ steps.analyze.outputs.component }}
+
+    steps:
+      - name: Get Issue Details
+        id: fetch
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue_num = context.payload.issue?.number || ${{ github.event.inputs.issue_number }};
+            
+            const issue = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue_num
+            });
+            
+            const issueData = {
+              number: issue.data.number,
+              title: issue.data.title,
+              body: issue.data.body || '',
+              state: issue.data.state,
+              labels: issue.data.labels.map(l => l.name),
+              author: issue.data.user.login,
+              created_at: issue.data.created_at,
+              url: issue.data.html_url
+            };
+            
+            core.setOutput('issue_json', JSON.stringify(issueData));
+            core.setOutput('issue_number', issue_num);
+            
+            return issueData;
+
+      - name: Structure Issue Data (MCP Format)
+        id: structure
+        run: |
+          cat << 'EOF' > issue_data.json
+          ${{ steps.fetch.outputs.issue_json }}
+          EOF
+          
+          # Create MCP-formatted data
+          echo "issue_data=$(cat issue_data.json)" >> $GITHUB_OUTPUT
+          
+          echo "✅ Issue data structured in MCP format"
+
+      - name: Analyze Issue (MCP Intelligence)
+        id: analyze
+        run: |
+          TITLE_LOWER=$(echo "${{ fromJson(steps.fetch.outputs.issue_json).title }}" | tr '[:upper:]' '[:lower:]')
+          BODY_LOWER=$(echo "${{ fromJson(steps.fetch.outputs.issue_json).body }}" | tr '[:upper:]' '[:lower:]')
+          
+          # Intelligent component detection
+          CAN_AUTOMATE="false"
+          COMPONENT="unknown"
+          
+          if [[ "$TITLE_LOWER" == *"contact"* ]] || [[ "$BODY_LOWER" == *"contact"* ]]; then
+            COMPONENT="contacts"
+            CAN_AUTOMATE="true"
+          elif [[ "$TITLE_LOWER" == *"crash"* ]] || [[ "$BODY_LOWER" == *"crash"* ]]; then
+            COMPONENT="stability"
+            CAN_AUTOMATE="true"
+          elif [[ "$TITLE_LOWER" == *"ui"* ]] || [[ "$TITLE_LOWER" == *"display"* ]]; then
+            COMPONENT="ui"
+            CAN_AUTOMATE="true"
+          fi
+          
+          echo "can_automate=$CAN_AUTOMATE" >> $GITHUB_OUTPUT
+          echo "component=$COMPONENT" >> $GITHUB_OUTPUT
+          
+          echo "📊 Analysis Complete:"
+          echo "  Component: $COMPONENT"
+          echo "  Can Automate: $CAN_AUTOMATE"
+
+      - name: Add MCP Labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = ['mcp-processed'];
+            
+            if ('${{ steps.analyze.outputs.can_automate }}' === 'true') {
+              labels.push('auto-fixable');
+              labels.push('component:${{ steps.analyze.outputs.component }}');
+            } else {
+              labels.push('needs-manual-review');
+            }
+            
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ steps.fetch.outputs.issue_number }},
+              labels: labels
+            });
+
+      - name: Post MCP Data Comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const component = '${{ steps.analyze.outputs.component }}';
+            const canAutomate = '${{ steps.analyze.outputs.can_automate }}';
+            
+            let body = `## 🤖 MCP Analysis Complete\n\n`;
+            body += `**Component Detected:** \`${component}\`\n`;
+            body += `**Automation Available:** ${canAutomate === 'true' ? '✅ Yes' : '⚠️ No'}\n\n`;
+            
+            if (canAutomate === 'true') {
+              body += `### Next Steps:\n`;
+              body += `1. Agent will fetch this issue data\n`;
+              body += `2. Apply automated fix\n`;
+              body += `3. Run full test suite\n`;
+              body += `4. Create PR if tests pass\n\n`;
+              body += `**Trigger agent with:**\n\`\`\`bash\n`;
+              body += `./scripts/agent-fix-issue.sh ${{ steps.fetch.outputs.issue_number }}\n`;
+              body += `\`\`\``;
+            } else {
+              body += `### Manual Review Required\n`;
+              body += `This issue requires manual investigation and fix.\n\n`;
+              body += `**Reason:** Component not in automation scope or complex issue.`;
+            }
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ steps.fetch.outputs.issue_number }},
+              body: body
+            });
+
+      - name: Upload MCP Data as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcp-issue-${{ steps.fetch.outputs.issue_number }}
+          path: issue_data.json
+          retention-days: 30
+

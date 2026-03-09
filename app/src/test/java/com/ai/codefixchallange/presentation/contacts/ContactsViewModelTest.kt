@@ -149,6 +149,25 @@ class ContactsViewModelTest {
     }
 
     @Test
+    fun `should show success state with empty list not error - regression test for issue 2`() = runTest {
+        // Regression test for issue #2: Empty contacts should show Success, not Error
+        // Bug was: when count == 0, it showed error which prevented contacts from displaying
+        // Given
+        val emptyContacts = emptyList<Contact>()
+        coEvery { contactRepository.hasContactPermission() } returns true
+        every { getContactsUseCase() } returns flowOf(emptyContacts)
+
+        // When
+        viewModel = ContactsViewModel(getContactsUseCase, contactRepository)
+        advanceUntilIdle()
+
+        // Then - Should be Success state, NOT Error
+        val state = viewModel.state.value
+        assertTrue(state is ContactsState.Success)
+        assertEquals(emptyContacts, (state as ContactsState.Success).contacts)
+    }
+
+    @Test
     fun `should show loading state before success`() = runTest {
         // Given
         val contacts = listOf(
@@ -171,4 +190,3 @@ class ContactsViewModelTest {
         assertTrue(finalState is ContactsState.Success)
     }
 }
-

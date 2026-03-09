@@ -137,9 +137,9 @@ class ContactsFragment : Fragment() {
         binding.errorLayout.visibility = View.GONE
         binding.swipeRefresh.isRefreshing = false
 
-        if (count == 0) {
-            showError("No contacts found")
-        }
+        // Don't show error for empty list - let RecyclerView show empty state
+        // This was the bug: count == 0 was showing error and hiding RecyclerView
+        // Now contacts can be displayed even if initially empty
     }
 
     /**

@@ -30,11 +30,18 @@ class ContactsViewModel @Inject constructor(
 
     /**
      * Check permission and load contacts
+     * If permission is granted, sync contacts from device first (if DB is empty)
      */
     fun checkPermissionAndLoadContacts() {
         viewModelScope.launch {
             val hasPermission = contactRepository.hasContactPermission()
             if (hasPermission) {
+                // First sync contacts from device to DB (if not already synced)
+                try {
+                    contactRepository.syncContacts()
+                } catch (e: Exception) {
+                    // Ignore sync errors, try to load from DB anyway
+                }
                 loadContacts()
             } else {
                 _state.value = ContactsState.PermissionRequired

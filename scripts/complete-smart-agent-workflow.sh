@@ -78,22 +78,37 @@ echo "📸 PHASE 2: Capturing BEFORE Screenshot"
 echo "════════════════════════════════════════════════════════"
 
 if [ ! -f "screenshots/issue-$ISSUE_NUMBER/before-fix.png" ]; then
-    echo "Installing app without fix..."
+    echo "Building app in current state (before fix)..."
     ./gradlew installDebug --no-daemon > /dev/null 2>&1
+
+    echo "Granting permissions..."
+    adb -s $DEVICE shell pm grant com.ai.codefixchallange android.permission.READ_CONTACTS 2>/dev/null || true
 
     echo "Launching app..."
     adb -s $DEVICE shell am force-stop com.ai.codefixchallange 2>/dev/null || true
     sleep 1
     adb -s $DEVICE shell am start -n com.ai.codefixchallange/.MainActivity 2>/dev/null || true
-    sleep 3
 
-    echo "Capturing screenshot..."
-    adb -s $DEVICE shell screencap -p /sdcard/before_fix.png
-    adb -s $DEVICE pull /sdcard/before_fix.png screenshots/issue-$ISSUE_NUMBER/before-fix.png > /dev/null 2>&1
+    echo "Waiting for app to fully render (5 seconds)..."
+    sleep 5
 
-    echo "✅ BEFORE screenshot captured"
+    echo "Capturing BEFORE screenshot..."
+    adb -s $DEVICE shell screencap -p /sdcard/before_fix_$ISSUE_NUMBER.png
+    adb -s $DEVICE pull /sdcard/before_fix_$ISSUE_NUMBER.png screenshots/issue-$ISSUE_NUMBER/before-fix.png 2>&1 | grep -v "bytes"
+
+    # Verify screenshot was captured
+    if [ -f "screenshots/issue-$ISSUE_NUMBER/before-fix.png" ]; then
+        SCREENSHOT_SIZE=$(ls -lh screenshots/issue-$ISSUE_NUMBER/before-fix.png | awk '{print $5}')
+        echo "✅ BEFORE screenshot captured successfully"
+        echo "   File: screenshots/issue-$ISSUE_NUMBER/before-fix.png"
+        echo "   Size: $SCREENSHOT_SIZE"
+        echo "   Shows: Issue in current state"
+    else
+        echo "⚠️  Screenshot capture may have failed"
+    fi
 else
     echo "ℹ️  BEFORE screenshot already exists"
+    echo "   Location: screenshots/issue-$ISSUE_NUMBER/before-fix.png"
 fi
 echo ""
 
@@ -150,18 +165,35 @@ echo ""
 echo "📸 PHASE 5: Capturing AFTER Screenshot"
 echo "════════════════════════════════════════════════════════"
 
-echo "Launching app with fix..."
+echo "Granting permissions..."
 adb -s $DEVICE shell pm grant com.ai.codefixchallange android.permission.READ_CONTACTS 2>/dev/null || true
+
+echo "Stopping any running instances..."
 adb -s $DEVICE shell am force-stop com.ai.codefixchallange 2>/dev/null || true
 sleep 1
+
+echo "Launching app with fix applied..."
 adb -s $DEVICE shell am start -n com.ai.codefixchallange/.MainActivity 2>/dev/null || true
-sleep 3
+
+echo "Waiting for app to fully render (5 seconds)..."
+sleep 5
 
 echo "Capturing screenshot..."
-adb -s $DEVICE shell screencap -p /sdcard/after_fix.png
-adb -s $DEVICE pull /sdcard/after_fix.png screenshots/issue-$ISSUE_NUMBER/after-fix.png > /dev/null 2>&1
+adb -s $DEVICE shell screencap -p /sdcard/after_fix_$ISSUE_NUMBER.png
 
-echo "✅ AFTER screenshot captured"
+echo "Pulling screenshot from device..."
+adb -s $DEVICE pull /sdcard/after_fix_$ISSUE_NUMBER.png screenshots/issue-$ISSUE_NUMBER/after-fix.png 2>&1 | grep -v "bytes"
+
+# Verify screenshot was captured
+if [ -f "screenshots/issue-$ISSUE_NUMBER/after-fix.png" ]; then
+    SCREENSHOT_SIZE=$(ls -lh screenshots/issue-$ISSUE_NUMBER/after-fix.png | awk '{print $5}')
+    echo "✅ AFTER screenshot captured successfully"
+    echo "   File: screenshots/issue-$ISSUE_NUMBER/after-fix.png"
+    echo "   Size: $SCREENSHOT_SIZE"
+    echo "   Shows: Fix applied and working"
+else
+    echo "⚠️  Screenshot capture may have failed"
+fi
 echo ""
 
 #=====================================================

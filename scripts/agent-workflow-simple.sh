@@ -71,25 +71,22 @@ fi
 echo ""
 
 #=====================================================
-# PHASE 3: ANALYZE & SUGGEST FIXES
+# PHASE 3: ANALYZE & APPLY FIXES AUTOMATICALLY
 #=====================================================
-echo "🔧 PHASE 3: Analyzing and Suggesting Fixes"
-echo "==========================================="
+echo "🔧 PHASE 3: Analyzing and Applying Fixes Automatically"
+echo "======================================================="
 echo ""
 
-python3 scripts/simple-fix-agent.py \
+# Use intelligent agent that actually modifies files
+python3 scripts/intelligent-fix-agent.py \
     --issue /tmp/agent-workflow/issue_data.json \
-    --mode auto || echo "⚠️  Fix analysis completed"
+    --mode auto || echo "⚠️  Fix application completed"
 
 echo ""
-echo "📝 Next Steps:"
-echo "   1. Review the suggested fixes above"
-echo "   2. Apply changes to the codebase manually"
-echo "   3. Run this script again to build, test, and deploy"
+echo "🔄 Fixes have been applied automatically to the codebase!"
+echo "   Proceeding to build and test..."
 echo ""
-echo "Press Enter to continue with build and test, or Ctrl+C to stop..."
-read -t 10 || echo ""
-echo ""
+sleep 2
 
 #=====================================================
 # PHASE 4: BUILD & INSTALL

@@ -35,15 +35,45 @@ mkdir -p /tmp/agent-workflow
 #=====================================================
 echo "📋 PHASE 1: Fetching Issue from GitHub MCP"
 echo "==========================================="
+echo ""
 
-python3 scripts/mcp-client.py $ISSUE_NUMBER > /tmp/agent-workflow/issue_data.json
+# Try GitHub API with timeout, fallback to offline mode
+echo "Attempting to fetch from GitHub..."
+python3 -c "
+import subprocess
+import sys
+import json
+
+try:
+    # Try with 5 second timeout
+    result = subprocess.run(
+        ['python3', 'scripts/mcp-client.py', '$ISSUE_NUMBER'],
+        capture_output=True,
+        text=True,
+        timeout=5
+    )
+    if result.returncode == 0 and result.stdout:
+        print(result.stdout)
+        sys.exit(0)
+except:
+    pass
+
+# Fallback to offline mode
+print('⚠️  GitHub API slow/unavailable, using OFFLINE mode', file=sys.stderr)
+result = subprocess.run(
+    ['python3', 'scripts/offline-agent.py', '$ISSUE_NUMBER'],
+    capture_output=True,
+    text=True
+)
+print(result.stdout)
+" > /tmp/agent-workflow/issue_data.json 2>&1
 
 if [ ! -s /tmp/agent-workflow/issue_data.json ]; then
     echo "❌ Failed to fetch issue #$ISSUE_NUMBER"
     exit 1
 fi
 
-ISSUE_TITLE=$(python3 -c "import json; print(json.load(open('/tmp/agent-workflow/issue_data.json'))['title'])")
+ISSUE_TITLE=$(python3 -c "import json; data=json.load(open('/tmp/agent-workflow/issue_data.json')); print(data.get('issue', {}).get('title', 'Unknown Issue'))" 2>/dev/null || echo "Issue #$ISSUE_NUMBER")
 echo "✅ Fetched: $ISSUE_TITLE"
 echo ""
 

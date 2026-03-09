@@ -1,10 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.CodeFixChallange" parent="Theme.MaterialComponents.Light.NoActionBar">
-        <!-- Edge-to-edge: Transparent system bars -->
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowLightStatusBar">true</item>
-        <item name="android:windowLightNavigationBar">true</item>
-    </style>
+    <style name="Theme.CodeFixChallange" parent="Theme.MaterialComponents.Light.NoActionBar" />
 </resources>

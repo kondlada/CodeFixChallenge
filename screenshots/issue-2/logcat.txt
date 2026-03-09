@@ -1,0 +1,73 @@
+EGACY-DIFF:72.4219 VIRTUAL-SKIN-SPEAKER-MODEL-UPPER-CLAMPED:37215.7 VIRTUAL-SKIN-SPEAKER-SUB-0:37143.3 VT_SPEAKER_LEGACY_WEIGHT:0 VT_SPEAKER_MODEL_WEIGHT:1 charging_therm:43509 disp0_therm:37800 flash_therm:38023 north_therm:39160 quiet_therm:39972 rfpa_therm:41055 soc_therm:42633 usb_pwr_therm:37443 
+03-09 13:50:38.077  1529  1549 I pixel-thermal: VIRTUAL-USB-UI:0 raw data: USB-MINUS-CHARGING:-6066 VIRTUAL-USB-UI:0 charging_therm:43509 usb_pwr_therm:37443 
+03-09 13:50:38.077  1529  1549 I pixel-thermal: disp0_therm:37.8 raw data: disp0_therm:37800 
+03-09 13:50:38.077  1529  1549 I pixel-thermal: VIRTUAL-SKIN-CPU-LIGHT-ODPM:38.8022 raw data: VIRTUAL-SKIN:38802.2 VIRTUAL-SKIN-CPU-LIGHT-ODPM:38802.2 
+03-09 13:50:38.077  1529  1549 I pixel-thermal: VIRTUAL-SKIN-CPU-LIGHT-ODPM power_budget=1236.02 err=0.197811 s_power=1066 time_elapsed_ms=7029 p=79.1245 i=90.893 d=0 dt_per_min=nan compensation=0 budget transient=0 control target=2 excluded power budget=0
+03-09 13:50:38.077  1529  1549 I pixel-thermal: VIRTUAL-SKIN-CPU-LIGHT-ODPM binded power rails: (S4M_VDD_CPU: 89.23 mW)(S3M_VDD_CPU1: 24.58 mW)(S2M_VDD_CPU2: 689.23 mW)(S2M_VDD_CPU2: 689.23 mW)
+03-09 13:50:38.077  1529  1549 I pixel-thermal: cellular-emergency:38.8022 raw data: VIRTUAL-SKIN:38802.2 cellular-emergency:38802.2 
+03-09 13:50:38.078  1529  1549 I pixel-thermal: north_therm:39.16 raw data: north_therm:39160 
+03-09 13:50:38.078  1529  1549 I pixel-thermal: VIRTUAL-SKIN-CPU-MID:38.8022 raw data: VIRTUAL-SKIN:38802.2 VIRTUAL-SKIN-CPU-MID:38802.2 
+03-09 13:50:38.078  1529  1549 I pixel-thermal: VIRTUAL-SKIN:38.8022 raw data: VIRTUAL-SKIN:38802.2 
+03-09 13:50:38.078  1529  1549 I pixel-thermal: VIRTUAL-SKIN-HINT:38.8022 raw data: VIRTUAL-SKIN:38802.2 VIRTUAL-SKIN-HINT:38802.2 
+03-09 13:50:38.078  1529  1549 I pixel-thermal: VIRTUAL-SKIN-CPU-ODPM:38.8022 raw data: VIRTUAL-SKIN:38802.2 VIRTUAL-SKIN-CPU-ODPM:38802.2 
+03-09 13:50:38.079  1529  1549 I pixel-thermal: VIRTUAL-SKIN-SOC-EXTREME:0 raw data: CONCURRENT_USE_POWER:1 EXTREME_CONDITION:0 EXTREME_POWER_VSKIN:0 EXTREME_THROTTLE:0 PARTIAL_SYSTEM_POWER:1606.3 S2S_VDD_GPU:0.642989 S7M_VDD_TPU:0 S8S_VDD_GMC:55.6906 VIRTUAL-SKIN:38802.2 VIRTUAL-SKIN-SOC-EXTREME:0 VIRTUAL_CPU_POWER:803.04 
+03-09 13:50:38.079  1529  1549 I pixel-thermal: flash_therm:38.023 raw data: flash_therm:38023 
+03-09 13:50:38.079  1529  1549 I pixel-thermal: rfpa_therm:41.055 raw data: rfpa_therm:41055 
+03-09 13:50:38.079  1529  1549 I pixel-thermal: quiet_therm:39.972 raw data: quiet_therm:39972 
+03-09 13:50:38.079  1529  1549 I pixel-thermal: VIRTUAL-SKIN-PREDICTION-MODEL: model_input: [39160.00 38023.00 42633.00 41055.00 43509.00 37800.00 37443.00 39972.00 38802.19 ]
+03-09 13:50:38.079  1529  1549 I native  : I0000 00:00:1773044438.079905    1549 thermal_tflite_wrapper.cc:261] ThermalTfliteInvoke
+03-09 13:50:38.082  1529  1549 I pixel-thermal: VIRTUAL-SKIN-PREDICTION-MODEL: model_output: [39005.6 39136.8 39255.3 39370.6 39469 39561.3 39646.4 39720 39796.8 39866 ]
+03-09 13:50:38.082  1529  1549 I pixel-thermal: VIRTUAL-SKIN-PREDICTION-MODEL: predicted_value: [39005.6 39136.8 39255.3 39370.6 39469 39561.3 39646.4 39720 39796.8 39866 ]
+03-09 13:50:38.083  1529  1549 I pixel-thermal: STATS-UPDATOR:0 raw data: EXTREME-CONDITION-POWER-MONITOR-44C:0 EXTREME-CONDITION-POWER-MONITOR-45C:0 EXTREME-CONDITION-POWER-MONITOR-46C:0 EXTREME_WORKLOAD_ODPM:1606.3 STATS-UPDATOR:0 VIRTUAL-SKIN:38802.2 VIRTUAL-SKIN-44C:0 VIRTUAL-SKIN-45C:0 VIRTUAL-SKIN-46C:0 VIRTUAL-SKIN-PREDICTION-MODEL:39005.6 VT-FORECAST-30SEC-BACK:39146.4 VT-FORECAST-60SEC-BACK:39580.6 VT-FORECAST-ERROR-30SEC:344.184 VT-FORECAST-ERROR-60SEC:778.457 VT-FORECAST-ERROR-NOW:203.379 VT-FORECAST-NOW:39005.6 charging_therm:43509 disp0_therm:37800 flash_therm:38023 north_therm:39160 quiet_therm:39972 rfpa_therm:41055 soc_therm:42633 usb_pwr_therm:37443 
+03-09 13:50:38.084  1529  1549 I pixel-thermal: VIRTUAL-SKIN-CHARGE-WIRED:38.8022 raw data: NO_WLC:1 VIRTUAL-SKIN-CHARGE:38802.2 VIRTUAL-SKIN-CHARGE-WIRED:38802.2 VIRTUAL-SKIN-EQ:38802.2 WLC_CHECK:1 thb_hda:54 
+03-09 13:50:38.084  1529  1549 I pixel-thermal: VIRTUAL-SKIN-CHARGE-WIRED power_budget=252.853 err=-0.802189 s_power=2493 time_elapsed_ms=7029 p=-145.196 i=-488.652 d=0 dt_per_min=0.00318793 compensation=0 budget transient=0 control target=2 excluded power budget=1606.3 (PARTIAL_SYSTEM_POWER: 1606.30 mW, cdev_weight: 1.000000)
+03-09 13:50:38.084  1529  1549 I pixel-thermal: VIRTUAL-USB-THROTTLING:0 raw data: USB-MINUS-CHARGING:-6066 VIRTUAL-USB-THROTTLING:0 usb_pwr_therm:37443 
+03-09 13:50:38.084  1529  1549 I pixel-thermal: usb_pwr_therm:37.443 raw data: usb_pwr_therm:37443 
+03-09 13:50:38.084  1529  1549 I pixel-thermal: VIRTUAL-SKIN-SOC:38.8022 raw data: VIRTUAL-SKIN:38802.2 VIRTUAL-SKIN-SOC:38802.2 
+03-09 13:50:38.085  1529  1549 I pixel-thermal: VIRTUAL-SKIN-SOC power_budget=4490.48 err=6.19781 s_power=960 time_elapsed_ms=7029 p=1859.34 i=1671.14 d=0 dt_per_min=nan compensation=0 budget transient=0 control target=4 excluded power budget=0
+03-09 13:50:38.085  1529  1549 I pixel-thermal: VIRTUAL-SKIN-SOC binded power rails: (S2M_VDD_CPU2: 689.23 mW)(S2M_VDD_CPU2: 689.23 mW)(S3M_VDD_CPU1: 24.58 mW)(S2S_VDD_GPU: 0.64 mW)(S4M_VDD_CPU: 89.23 mW)(S7M_VDD_TPU: 0.00 mW)
+03-09 13:50:38.085  1529  1549 I pixel-thermal: VIRTUAL-SKIN-CHARGE-PERSIST:38.8022 raw data: VIRTUAL-SKIN-CHARGE:38802.2 VIRTUAL-SKIN-CHARGE-PERSIST:38802.2 
+03-09 13:50:38.085  1529  1549 I pixel-thermal: VIRTUAL-SKIN-CHARGE-PERSIST power_budget=3710 err=2.19781 s_power=1595 time_elapsed_ms=7029 p=1098.91 i=1489.21 d=0 dt_per_min=0.00318793 compensation=0 budget transient=0 control target=2 excluded power budget=0
+03-09 13:50:38.085  1529  1549 I pixel-thermal: Successfully update cdev cpufreq-cpu7 budget to 982000(state:9)
+03-09 13:50:38.086  1529  1549 I pixel-thermal: Successfully update cdev cpufreq-cpu5 budget to 535000(state:9)
+03-09 13:50:38.086  1529  1549 I pixel-thermal: Successfully update cdev cpufreq-cpu2 budget to 833000(state:5)
+03-09 13:50:38.214  1675  1826 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+03-09 13:50:38.215  1675  1826 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+03-09 13:50:38.216  1675  1826 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+03-09 13:50:38.359  1675  1826 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+03-09 13:50:38.360  1675  1826 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+03-09 13:50:38.360  1675  1826 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+03-09 13:50:38.362  1675  1826 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+03-09 13:50:38.406  6843  6843 I Finsky:background: [2] Memory trim requested to level 40
+03-09 13:50:38.412 25389 25389 I Finsky  : [2] Memory trim requested to level 40
+03-09 13:50:38.412 25389 25389 I Finsky  : [2] Flushing in-memory image cache
+03-09 13:50:38.618   947   947 W TracingMuxer: type=1400 audit(0.0:13660): avc:  denied  { write } for  name="traced_producer" dev="tmpfs" ino=1362 scontext=u:r:hal_camera_default:s0 tcontext=u:object_r:traced_producer_socket:s0 tclass=sock_file permissive=0
+03-09 13:50:38.983  1529  1529 I pixel-thermal: VIRTUAL-SKIN:38.8022 raw data: VIRTUAL-SKIN:38802.2 
+03-09 13:50:39.298 26862 24728 I NearbyMediums: No BLE Fast/GATT advertisements found in the latest cycle.
+03-09 13:50:39.298 26862 24728 I NearbyMediums: Current Tracked Scanning Clients are : {NearbyConnections.EnvironmentMonitor, NearbySharing, NearbyConnections.TxAdvertisement}
+03-09 13:50:39.409 15812 15824 I ejwp    : (REDACTED) appOpsListener %s %s
+03-09 13:50:39.409 15812 15824 I ejwp    : (REDACTED) Ignoring irrelevant audio permission changes for package %s
+03-09 13:50:39.447  2776  2967 D TemperatureStateSource: sequence=5186 actualDelay=10001
+03-09 13:50:39.448  2776  2967 D TemperatureStateSource: Reading temperature: sequence=5187
+03-09 13:50:39.450  1529  1529 I pixel-thermal: VIRTUAL-SKIN:38.8022 raw data: VIRTUAL-SKIN:38802.2 
+03-09 13:50:39.450  2776  2967 D TemperatureStateSource: getDeviceTemperatures: sequence=5187 deviceTemperatureType=3 temperatureSource=0 temperatures=[38.80219]
+03-09 13:50:39.450  2776  2967 D BusinessScope: Enqueuing the block
+03-09 13:50:39.450  2776  2967 D TemperatureStateSource: sequence=5187 waitTime=10000
+03-09 13:50:39.450  2776  3070 D BusinessScope: Start running the #10496 block
+03-09 13:50:39.451  2776  3070 D BusinessScope: Enqueuing the block
+03-09 13:50:39.451  2776  3070 D ImpulseStateSource: Notify clients: 5243
+03-09 13:50:39.451  2776  3070 D BusinessScope: Finish running the #10496 block
+03-09 13:50:39.451  2776  3070 D BusinessScope: Start running the #10497 block
+03-09 13:50:39.451  2776  3070 D BusinessScope: Finish running the #10497 block
+03-09 13:50:39.764  1675  1826 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+03-09 13:50:39.764  1675  1826 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+03-09 13:50:39.764  1675  1826 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+03-09 13:50:39.764  1675  1826 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+03-09 13:50:39.764  1675  1826 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+03-09 13:50:39.765  1675  1826 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+03-09 13:50:39.855  1031  1118 I WifiHAL : Creating message to get link statistics; iface = 47
+03-09 13:50:39.974  1031  1118 E libbinder.IPCThreadState: binder thread pool (1 threads) starved for 119 ms
+03-09 13:50:39.975  1031  1118 I WifiHAL : Getting cached scan results, iface handle = 0xb400007943e1f710
+03-09 13:50:39.975  1031  1118 E WifiHAL : Creating message to get cached scan results
+03-09 13:50:39.984  1031  1118 I WifiHAL : In GetCachedScanResultsCommand::handleResponse
+03-09 13:50:40.039  1675  2440 D ConnectivityService: NetReassign [no changes] [c 1] [a 1] [i 9]

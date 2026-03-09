@@ -49,30 +49,86 @@ echo -e "${GREEN}✅ Found $DEVICE_COUNT device(s)${NC}"
 adb devices
 echo ""
 
-# Auto-select device (prefer emulator for testing)
-SELECTED_DEVICE=$(adb devices | grep "emulator" | head -1 | awk '{print $1}')
+# Auto-select device (prefer physical device over emulator)
+SELECTED_DEVICE=$(adb devices | grep -v "List" | grep -v "emulator" | grep "device" | head -1 | awk '{print $1}')
 if [ -z "$SELECTED_DEVICE" ]; then
-    # No emulator, use first available device
-    SELECTED_DEVICE=$(adb devices | grep -v "List" | grep "device" | head -1 | awk '{print $1}')
+    # No physical device, use emulator
+    SELECTED_DEVICE=$(adb devices | grep "emulator" | head -1 | awk '{print $1}')
 fi
 
 export ANDROID_SERIAL="$SELECTED_DEVICE"
 echo -e "${GREEN}✅ Using device: $SELECTED_DEVICE${NC}"
 echo ""
 
-# Check if gh CLI is installed
-if ! command -v gh &> /dev/null; then
-    echo -e "${RED}❌ GitHub CLI (gh) not installed${NC}"
-    echo "Install with: brew install gh"
+# Check if gh CLI is installed and working
+GH_AVAILABLE=false
+if command -v gh &> /dev/null; then
+    # Check authentication with timeout
+    if timeout 5s gh auth status &> /dev/null; then
+        GH_AVAILABLE=true
+        echo -e "${GREEN}✅ GitHub CLI authenticated${NC}"
+    else
+        echo -e "${YELLOW}⚠️  GitHub CLI not authenticated or timeout${NC}"
+        echo "Will use GitHub API fallback"
+    fi
+else
+    echo -e "${YELLOW}⚠️  GitHub CLI not installed${NC}"
+    echo "Will use GitHub API fallback"
+fi
+
+# Fetch issue details
+echo -e "${BLUE}📥 Fetching issue #${ISSUE_NUMBER}...${NC}"
+
+if [ "$GH_AVAILABLE" = true ]; then
+    # Try gh CLI first
+    ISSUE_DATA=$(timeout 10s gh issue view $ISSUE_NUMBER --json title,body,state 2>/dev/null || echo "")
+    if [ -n "$ISSUE_DATA" ]; then
+        ISSUE_TITLE=$(echo "$ISSUE_DATA" | python3 -c "import sys, json; data = json.load(sys.stdin); print(data.get('title', 'Unknown'))" 2>/dev/null)
+        ISSUE_STATE=$(echo "$ISSUE_DATA" | python3 -c "import sys, json; data = json.load(sys.stdin); print(data.get('state', 'unknown'))" 2>/dev/null)
+    fi
+fi
+
+# Fallback to API if gh CLI didn't work
+if [ -z "$ISSUE_TITLE" ] || [ "$ISSUE_TITLE" = "Unknown" ]; then
+    echo -e "${YELLOW}⚠️  Using GitHub API...${NC}"
+
+    # Get repo from git remote
+    REPO_URL=$(git config --get remote.origin.url | sed 's/.*github.com[:/]\(.*\)\.git/\1/' || echo "kondlada/CodeFixChallenge")
+
+    # Fetch from API
+    ISSUE_JSON=$(curl -s "https://api.github.com/repos/$REPO_URL/issues/$ISSUE_NUMBER" 2>/dev/null)
+
+    if [ -n "$ISSUE_JSON" ]; then
+        ISSUE_TITLE=$(echo "$ISSUE_JSON" | python3 -c "import sys, json; data = json.load(sys.stdin); print(data.get('title', 'Not Found'))" 2>/dev/null)
+        ISSUE_STATE=$(echo "$ISSUE_JSON" | python3 -c "import sys, json; data = json.load(sys.stdin); print(data.get('state', 'unknown'))" 2>/dev/null)
+    fi
+fi
+
+# Check if we got the issue
+if [ -z "$ISSUE_TITLE" ] || [ "$ISSUE_TITLE" = "Not Found" ] || [ "$ISSUE_TITLE" = "Unknown" ]; then
+    echo -e "${RED}❌ Could not fetch issue #${ISSUE_NUMBER}${NC}"
+    echo ""
+    echo "Possible reasons:"
+    echo "  - Issue doesn't exist"
+    echo "  - Repository is private and no authentication"
+    echo "  - Network issues"
+    echo ""
+    echo "Check issues at: https://github.com/$REPO_URL/issues"
     exit 1
 fi
 
-# Check if authenticated
-if ! gh auth status &> /dev/null; then
-    echo -e "${YELLOW}⚠️  GitHub CLI not authenticated${NC}"
-    echo "Run: gh auth login"
-    exit 1
+if [ "$ISSUE_STATE" = "closed" ]; then
+    echo -e "${YELLOW}⚠️  Issue #${ISSUE_NUMBER} is already closed${NC}"
+    read -p "Continue anyway? (y/n) " -n 1 -r
+    echo ""
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
 fi
+
+echo -e "${GREEN}✅ Issue #${ISSUE_NUMBER}: ${ISSUE_TITLE}${NC}"
+echo -e "   State: ${ISSUE_STATE}"
+echo ""
 
 # Setup MCP server environment if needed
 if [ ! -d "${PROJECT_DIR}/mcp-server/venv" ]; then

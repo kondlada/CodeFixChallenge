@@ -53,14 +53,14 @@ echo -e "${GREEN}✅ Found $DEVICES device(s)${NC}"
 adb devices
 echo ""
 
-# Auto-select device (prefer emulator, or use first device)
+# Auto-select device (prefer physical device over emulator)
 if [ -z "$ANDROID_SERIAL" ]; then
-    # Try to find an emulator first
-    SELECTED_DEVICE=$(adb devices | grep "emulator" | head -1 | awk '{print $1}')
+    # Try to find a physical device first
+    SELECTED_DEVICE=$(adb devices | grep -v "List" | grep -v "emulator" | grep "device" | head -1 | awk '{print $1}')
 
     if [ -z "$SELECTED_DEVICE" ]; then
-        # No emulator, use first available device
-        SELECTED_DEVICE="${DEVICE_LIST[0]}"
+        # No physical device, use emulator
+        SELECTED_DEVICE=$(adb devices | grep "emulator" | head -1 | awk '{print $1}')
     fi
 
     export ANDROID_SERIAL="$SELECTED_DEVICE"

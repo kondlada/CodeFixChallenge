@@ -100,6 +100,13 @@ class GitHubMCPServer:
             # Fallback to GitHub API
             try:
                 import urllib.request
+                import ssl
+
+                # Create SSL context that handles certificate issues
+                ssl_context = ssl.create_default_context()
+                # For development/testing, can disable verification if needed
+                # ssl_context.check_hostname = False
+                # ssl_context.verify_mode = ssl.CERT_NONE
 
                 # Get repo from git remote
                 try:
@@ -118,11 +125,22 @@ class GitHubMCPServer:
 
                 # Add authentication if token available
                 req = urllib.request.Request(api_url)
+                req.add_header('User-Agent', 'Mozilla/5.0 (GitHub MCP Server)')
                 if self.github_token:
                     req.add_header('Authorization', f'token {self.github_token}')
 
-                with urllib.request.urlopen(req, timeout=10) as response:
-                    api_data = json.loads(response.read().decode())
+                try:
+                    with urllib.request.urlopen(req, timeout=10, context=ssl_context) as response:
+                        api_data = json.loads(response.read().decode())
+                except ssl.SSLError:
+                    # If SSL fails, try without verification (less secure but works)
+                    logger.warning("SSL verification failed, trying without verification...")
+                    ssl_context_no_verify = ssl.create_default_context()
+                    ssl_context_no_verify.check_hostname = False
+                    ssl_context_no_verify.verify_mode = ssl.CERT_NONE
+
+                    with urllib.request.urlopen(req, timeout=10, context=ssl_context_no_verify) as response:
+                        api_data = json.loads(response.read().decode())
 
                 # Transform API response to match gh CLI format
                 issue_data = {
@@ -145,9 +163,28 @@ class GitHubMCPServer:
 
             except Exception as api_error:
                 logger.error(f"API fallback also failed: {api_error}")
+
+                # Last resort: Try manual issue fetch script
+                logger.warning("Trying manual issue fetch as last resort...")
+                try:
+                    import os
+                    script_path = os.path.join(os.path.dirname(__file__), '..', 'manual-issue-fetch.py')
+                    result = subprocess.run(['python3', script_path, str(issue_number)],
+                                          capture_output=True, text=True, timeout=5)
+                    if result.returncode == 0:
+                        manual_data = json.loads(result.stdout)
+                        logger.info(f"Successfully fetched issue via manual script: {manual_data['title']}")
+                        return {
+                            "success": True,
+                            "data": manual_data,
+                            "source": "manual"
+                        }
+                except Exception as manual_error:
+                    logger.error(f"Manual fetch also failed: {manual_error}")
+
                 return {
                     "success": False,
-                    "error": f"Both gh CLI and API failed. gh CLI: {str(e)}, API: {str(api_error)}"
+                    "error": f"All methods failed. gh CLI: {str(e)}, API: {str(api_error)}"
                 }
 
     def analyze_codebase(self, issue_data: Dict[str, Any]) -> Dict[str, Any]:

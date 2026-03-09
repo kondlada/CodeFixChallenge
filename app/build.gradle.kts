@@ -1,7 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.navigation.safeargs)
@@ -46,28 +45,21 @@ android {
         compose = true
         viewBinding = true
     }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.10"  // Compatible with Kotlin 1.9.22
+    }
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
             isReturnDefaultValues = true
         }
     }
-
- /*   packagingOptions {
-        resources.excludes.addAll(listOf(
-            "META-INF/LICENSE.md",
-            "META-INF/LICENSE",
-            "META-INF/NOTICE.md",
-            "META-INF/NOTICE",
-            "META-INF/DEPENDENCIES",
-            "META-INF/ASL2.0"
-        ))
-    }*/
 }
 
 hilt {
     enableAggregatingTask = false
 }
+
 
 dependencies {
     // Core Android

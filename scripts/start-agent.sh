@@ -2,6 +2,7 @@
 
 # Start Agent Workflow Script
 # Starts MCP server and runs intelligent agent for complete automation
+# Now includes automatic testing and validation
 
 set -e
 
@@ -30,6 +31,33 @@ echo -e "${BLUE}🚀 Starting Intelligent Agent Workflow${NC}"
 echo "========================================"
 echo -e "Issue: ${GREEN}#${ISSUE_NUMBER}${NC}"
 echo "Project: ${PROJECT_DIR}"
+echo ""
+
+# Step 0: Check for connected devices (required for testing)
+echo -e "${BLUE}📱 Checking for connected devices...${NC}"
+DEVICE_COUNT=$(adb devices | grep -v "List" | grep "device" | wc -l | xargs)
+
+if [ "$DEVICE_COUNT" -eq 0 ]; then
+    echo -e "${YELLOW}⚠️  No device connected${NC}"
+    echo "The agent needs a device to run tests."
+    echo ""
+    echo "Please start an emulator or connect a device, then run again."
+    exit 1
+fi
+
+echo -e "${GREEN}✅ Found $DEVICE_COUNT device(s)${NC}"
+adb devices
+echo ""
+
+# Auto-select device (prefer emulator for testing)
+SELECTED_DEVICE=$(adb devices | grep "emulator" | head -1 | awk '{print $1}')
+if [ -z "$SELECTED_DEVICE" ]; then
+    # No emulator, use first available device
+    SELECTED_DEVICE=$(adb devices | grep -v "List" | grep "device" | head -1 | awk '{print $1}')
+fi
+
+export ANDROID_SERIAL="$SELECTED_DEVICE"
+echo -e "${GREEN}✅ Using device: $SELECTED_DEVICE${NC}"
 echo ""
 
 # Check if gh CLI is installed
@@ -140,16 +168,98 @@ deactivate
 echo ""
 
 if [ $AGENT_EXIT_CODE -eq 0 ]; then
-    echo -e "${GREEN}✨ Workflow completed successfully!${NC}"
+    echo -e "${GREEN}✅ Agent completed successfully!${NC}"
+    echo ""
+
+    # Step: Run automated tests and validation
+    echo -e "${BLUE}🧪 Running automated tests and validation...${NC}"
+    echo "========================================"
+    echo ""
+
+    cd "${PROJECT_DIR}"
+
+    # Build the project
+    echo -e "${BLUE}🔨 Building project...${NC}"
+    ./gradlew clean assembleDebug
+
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}❌ Build failed after agent changes${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}✅ Build successful${NC}"
+    echo ""
+
+    # Run unit tests
+    echo -e "${BLUE}🧪 Running unit tests...${NC}"
+    ./gradlew testDebugUnitTest --continue
+
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}❌ Unit tests failed${NC}"
+        echo "Test report: file://${PROJECT_DIR}/app/build/reports/tests/testDebugUnitTest/index.html"
+        exit 1
+    fi
+    echo -e "${GREEN}✅ Unit tests passed${NC}"
+    echo ""
+
+    # Install app on device
+    echo -e "${BLUE}📦 Installing app on device...${NC}"
+    ./gradlew installDebug
+
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}❌ Installation failed${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}✅ App installed${NC}"
+    echo ""
+
+    # Launch app and check for crashes
+    echo -e "${BLUE}🚀 Testing app launch...${NC}"
+    adb -s $ANDROID_SERIAL logcat -c
+    adb -s $ANDROID_SERIAL shell am start -n com.ai.codefixchallange/.MainActivity
+
+    sleep 5
+
+    CRASHES=$(adb -s $ANDROID_SERIAL logcat -d | grep -c "FATAL.*codefixchallange" || true)
+
+    if [ "$CRASHES" -gt 0 ]; then
+        echo -e "${RED}❌ App crashed during launch!${NC}"
+        echo ""
+        adb -s $ANDROID_SERIAL logcat -d | grep -A 30 "FATAL.*codefixchallange" | tail -40
+        echo ""
+        echo -e "${RED}Agent's fix caused a crash. Manual intervention needed.${NC}"
+        exit 1
+    fi
+
+    echo -e "${GREEN}✅ App launches successfully, no crashes${NC}"
+    echo ""
+
+    # Run instrumented tests if available
+    echo -e "${BLUE}🧪 Running instrumented tests...${NC}"
+    ./gradlew connectedDebugAndroidTest --continue || {
+        echo -e "${YELLOW}⚠️  Some instrumented tests failed or were skipped${NC}"
+        echo "Test report: file://${PROJECT_DIR}/app/build/reports/androidTests/connected/debug/index.html"
+    }
+    echo ""
+
+    # Generate coverage report
+    echo -e "${BLUE}📊 Generating coverage report...${NC}"
+    ./gradlew jacocoTestReport || true
+    echo -e "${GREEN}✅ Coverage report generated${NC}"
+    echo ""
+
+    echo "========================================"
+    echo -e "${GREEN}✨ All validations passed!${NC}"
     echo ""
     echo "Next steps:"
     echo "  1. Review the PR on GitHub"
-    echo "  2. Check CI test results"
+    echo "  2. Check test reports:"
+    echo "     - Unit tests: file://${PROJECT_DIR}/app/build/reports/tests/testDebugUnitTest/index.html"
+    echo "     - Coverage: file://${PROJECT_DIR}/app/build/reports/jacoco/jacocoTestReport/html/index.html"
     echo "  3. Mark PR as ready for review"
     echo "  4. Request reviews from team"
     echo "  5. Merge after approval"
 else
-    echo -e "${RED}❌ Workflow failed!${NC}"
+    echo -e "${RED}❌ Agent workflow failed!${NC}"
     echo "Check the output above for errors"
 fi
 

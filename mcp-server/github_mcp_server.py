@@ -77,27 +77,78 @@ class GitHubMCPServer:
         ]
 
     def fetch_github_issue(self, issue_number: int) -> Dict[str, Any]:
-        """Fetch issue details from GitHub"""
+        """Fetch issue details from GitHub using gh CLI or API fallback"""
         logger.info(f"Fetching issue #{issue_number}")
 
+        # Try gh CLI first
         try:
             cmd = ['gh', 'issue', 'view', str(issue_number), '--json',
                    'number,title,body,labels,state,author,createdAt,comments']
 
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            result = subprocess.run(cmd, capture_output=True, text=True,
+                                   check=True, timeout=10)
             issue_data = json.loads(result.stdout)
 
-            logger.info(f"Successfully fetched issue: {issue_data['title']}")
+            logger.info(f"Successfully fetched issue via gh CLI: {issue_data['title']}")
             return {
                 "success": True,
                 "data": issue_data
             }
-        except subprocess.CalledProcessError as e:
-            logger.error(f"Failed to fetch issue: {e.stderr}")
-            return {
-                "success": False,
-                "error": str(e.stderr)
-            }
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError) as e:
+            logger.warning(f"gh CLI failed: {e}, trying API fallback...")
+
+            # Fallback to GitHub API
+            try:
+                import urllib.request
+
+                # Get repo from git remote
+                try:
+                    repo_result = subprocess.run(['git', 'config', '--get', 'remote.origin.url'],
+                                                capture_output=True, text=True, check=True)
+                    repo_url = repo_result.stdout.strip()
+                    # Parse repo owner/name from URL
+                    if 'github.com' in repo_url:
+                        repo_path = repo_url.split('github.com')[1].strip('/:').replace('.git', '')
+                    else:
+                        repo_path = "kondlada/CodeFixChallenge"  # Default
+                except:
+                    repo_path = "kondlada/CodeFixChallenge"  # Default
+
+                api_url = f"https://api.github.com/repos/{repo_path}/issues/{issue_number}"
+
+                # Add authentication if token available
+                req = urllib.request.Request(api_url)
+                if self.github_token:
+                    req.add_header('Authorization', f'token {self.github_token}')
+
+                with urllib.request.urlopen(req, timeout=10) as response:
+                    api_data = json.loads(response.read().decode())
+
+                # Transform API response to match gh CLI format
+                issue_data = {
+                    'number': api_data.get('number'),
+                    'title': api_data.get('title'),
+                    'body': api_data.get('body', ''),
+                    'state': api_data.get('state'),
+                    'labels': [{'name': label['name']} for label in api_data.get('labels', [])],
+                    'author': {'login': api_data.get('user', {}).get('login', 'unknown')},
+                    'createdAt': api_data.get('created_at'),
+                    'comments': []  # API doesn't include comments in single issue call
+                }
+
+                logger.info(f"Successfully fetched issue via API: {issue_data['title']}")
+                return {
+                    "success": True,
+                    "data": issue_data,
+                    "source": "api"
+                }
+
+            except Exception as api_error:
+                logger.error(f"API fallback also failed: {api_error}")
+                return {
+                    "success": False,
+                    "error": f"Both gh CLI and API failed. gh CLI: {str(e)}, API: {str(api_error)}"
+                }
 
     def analyze_codebase(self, issue_data: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze codebase to understand context"""

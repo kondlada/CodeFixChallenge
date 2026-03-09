@@ -83,18 +83,32 @@ import androidx.core.view.updatePadding"""
         themes_content = themes_file.read_text()
 
         if "android:statusBarColor" not in themes_content:
-            # Add transparent system bars
-            style_end = themes_content.rfind("</style>")
-            if style_end != -1:
-                new_items = """        <!-- Edge-to-edge: Transparent system bars -->
+            # Replace the self-closing style tag with proper content
+            if "/>" in themes_content:
+                themes_content = themes_content.replace(
+                    '<style name="Theme.CodeFixChallange" parent="Theme.MaterialComponents.Light.NoActionBar" />',
+                    '''<style name="Theme.CodeFixChallange" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <!-- Edge-to-edge: Transparent system bars -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>'''
+                )
+            else:
+                # Add transparent system bars before </style>
+                style_end = themes_content.rfind("</style>")
+                if style_end != -1:
+                    new_items = """        <!-- Edge-to-edge: Transparent system bars -->
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowLightNavigationBar">true</item>
     """
-                themes_content = themes_content[:style_end] + new_items + themes_content[style_end:]
-                themes_file.write_text(themes_content)
-                print("   ✅ themes.xml updated with transparent system bars")
+                    themes_content = themes_content[:style_end] + new_items + themes_content[style_end:]
+
+            themes_file.write_text(themes_content)
+            print("   ✅ themes.xml updated with transparent system bars")
         else:
             print("   ℹ️  themes.xml already has system bar colors")
 

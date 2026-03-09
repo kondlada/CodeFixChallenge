@@ -40,6 +40,7 @@ class MainActivity : AppCompatActivity() {
             windowInsets
         }
 
+
         // Set up the toolbar as ActionBar
         setSupportActionBar(binding.toolbar)
 

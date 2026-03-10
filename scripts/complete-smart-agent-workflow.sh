@@ -1,4 +1,4 @@
-y #!/bin/bash
+#!/bin/bash
 
 # 🤖 Complete Smart Agent Workflow with Issue Closing
 # Usage: ./complete-smart-agent-workflow.sh <issue_number> <device_id>
@@ -38,37 +38,90 @@ mkdir -p automation-results
 mkdir -p /tmp/agent-workflow
 
 #=====================================================
-# PHASE 1: FETCH ISSUE (OFFLINE MODE FOR DEMO)
+# PHASE 1: FETCH ISSUE FROM GITHUB
 #=====================================================
-echo "📋 PHASE 1: Fetching Issue Data"
+echo "📋 PHASE 1: Fetching Issue #$ISSUE_NUMBER from GitHub"
 echo "════════════════════════════════════════════════════════"
 
-# Create issue data (in real scenario, this comes from GitHub)
-cat > /tmp/agent-workflow/issue_data.json << EOF
-{
-  "source": "github",
-  "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
-  "issue": {
-    "number": $ISSUE_NUMBER,
-    "title": "Edge-to-edge support needed for Android 36",
-    "body": "App content is hidden behind status bar and navigation bar on Android 36 device. WindowInsets are not being applied properly. Need to implement edge-to-edge display with proper system bar handling.",
-    "state": "open",
-    "labels": ["bug", "ui", "android-36"],
-    "author": "kondlada"
-  },
-  "analysis": {
-    "components": ["MainActivity", "Theme"],
-    "priority": "high",
-    "type": "bug"
-  },
-  "metadata": {
-    "repo": "$REPO",
-    "fetched_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-  }
-}
-EOF
+echo "Fetching issue details from GitHub API..."
 
-echo "✅ Issue data loaded"
+# Use GitHub API directly (more reliable than gh CLI)
+ISSUE_JSON=$(curl -s -m 10 "https://api.github.com/repos/$REPO/issues/$ISSUE_NUMBER" 2>/dev/null)
+
+if [ $? -eq 0 ] && [ -n "$ISSUE_JSON" ]; then
+    # Write JSON to temp file first to avoid shell escaping issues
+    echo "$ISSUE_JSON" > /tmp/agent-workflow/raw_issue.json
+
+    # Convert API response to our format
+    python3 << 'PYEOF' > /tmp/agent-workflow/issue_data.json
+import json
+import sys
+from datetime import datetime
+
+try:
+    # Read from file to avoid control character issues
+    with open('/tmp/agent-workflow/raw_issue.json', 'r') as f:
+        gh_data = json.load(f)
+
+    # Check if we got an error
+    if 'message' in gh_data and 'Not Found' in gh_data.get('message', ''):
+        print(f"Error: Issue not found", file=sys.stderr)
+        sys.exit(1)
+
+    # Extract labels
+    labels = [label.get('name', '') for label in gh_data.get('labels', [])]
+
+    issue_data = {
+        "source": "github-api",
+        "timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "issue": {
+            "number": gh_data.get("number"),
+            "title": gh_data.get("title", ""),
+            "body": gh_data.get("body", ""),
+            "state": gh_data.get("state", "open"),
+            "labels": labels,
+            "author": gh_data.get("user", {}).get("login", "unknown")
+        },
+        "analysis": {
+            "components": [],
+            "priority": "medium",
+            "type": "bug"
+        },
+        "metadata": {
+            "repo": "kondlada/CodeFixChallenge",
+            "fetched_at": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        }
+    }
+
+    print(json.dumps(issue_data, indent=2))
+except Exception as e:
+    print(f"Error: {e}", file=sys.stderr)
+    sys.exit(1)
+PYEOF
+
+    if [ $? -eq 0 ] && [ -f "/tmp/agent-workflow/issue_data.json" ]; then
+        ISSUE_TITLE=$(python3 -c "import json; data=json.load(open('/tmp/agent-workflow/issue_data.json')); print(data['issue']['title'])" 2>/dev/null)
+        if [ -n "$ISSUE_TITLE" ]; then
+            echo "✅ Issue #$ISSUE_NUMBER fetched from GitHub"
+            echo "   Title: $ISSUE_TITLE"
+        else
+            echo "❌ Could not parse issue title"
+            exit 1
+        fi
+    else
+        echo "❌ Could not parse GitHub API response"
+        exit 1
+    fi
+else
+    echo "❌ Could not fetch issue #$ISSUE_NUMBER from GitHub"
+    echo "   Please check:"
+    echo "   - Issue number is correct"
+    echo "   - Repository is accessible: $REPO"
+    echo "   - Internet connection is working"
+    exit 1
+fi
+
+
 echo ""
 
 #=====================================================

@@ -147,7 +147,7 @@ if [ ! -f "screenshots/issue-$ISSUE_NUMBER/before-fix.png" ]; then
 
     echo "Capturing BEFORE screenshot..."
     adb -s $DEVICE shell screencap -p /sdcard/before_fix_$ISSUE_NUMBER.png
-    adb -s $DEVICE pull /sdcard/before_fix_$ISSUE_NUMBER.png screenshots/issue-$ISSUE_NUMBER/before-fix.png 2>&1 | grep -v "bytes"
+    adb -s $DEVICE pull /sdcard/before_fix_$ISSUE_NUMBER.png screenshots/issue-$ISSUE_NUMBER/before-fix.png 2>&1 | grep "pulled" || true
 
     # Verify screenshot was captured
     if [ -f "screenshots/issue-$ISSUE_NUMBER/before-fix.png" ]; then
@@ -235,7 +235,7 @@ echo "Capturing screenshot..."
 adb -s $DEVICE shell screencap -p /sdcard/after_fix_$ISSUE_NUMBER.png
 
 echo "Pulling screenshot from device..."
-adb -s $DEVICE pull /sdcard/after_fix_$ISSUE_NUMBER.png screenshots/issue-$ISSUE_NUMBER/after-fix.png 2>&1 | grep -v "bytes"
+adb -s $DEVICE pull /sdcard/after_fix_$ISSUE_NUMBER.png screenshots/issue-$ISSUE_NUMBER/after-fix.png 2>&1 | grep "pulled" || true
 
 # Verify screenshot was captured
 if [ -f "screenshots/issue-$ISSUE_NUMBER/after-fix.png" ]; then

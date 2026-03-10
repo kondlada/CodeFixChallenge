@@ -4,6 +4,31 @@
 
 ---
 
+## ⚠️ **IMPORTANT: WHICH AGENT SCRIPT TO USE?**
+
+### Current Status:
+1. **`./scripts/complete-smart-agent-workflow.sh`** ❌ **HAS ISSUES**
+   - Original "smart agent" with full features
+   - **Problem:** Hangs during execution, doesn't complete
+   - Status: NEEDS FIXING
+
+2. **`./scripts/run-agent-simple.sh`** ✅ **WORKS NOW**
+   - Simplified version created to work around issues
+   - Fast (14s), reliable, no hanging
+   - **Use this until complete-smart-agent-workflow.sh is fixed**
+
+### Recommended Command (Working):
+```bash
+./scripts/run-agent-simple.sh 4
+```
+
+### Original Command (Broken):
+```bash
+./scripts/complete-smart-agent-workflow.sh 4 57111FDCH007MJ  # ❌ Hangs
+```
+
+---
+
 ## 🎯 Your Concerns Addressed:
 
 ### 1. **Previous Issues Verification**
@@ -11,11 +36,12 @@
 **Solution Needed:** Add test cases that verify previous fixes still work
 
 ### 2. **Simple Agent Command**
-✅ **FIXED** - Created `run-agent-simple.sh`
+✅ **WORKING** - Use `run-agent-simple.sh`
 ```bash
 ./scripts/run-agent-simple.sh 4
 ```
-**Result:** Works! Single command execution
+**Result:** Works! Single command execution (14s)
+**Note:** Original `complete-smart-agent-workflow.sh` needs fixing
 
 ### 3. **Issue #4 Still Open**
 ⚠️ **REQUIRES MANUAL CLOSE** - gh CLI not authenticated
@@ -23,7 +49,7 @@
 **Status:** Needs manual close with comment
 
 ### 4. **Final Agent Run**
-✅ **EXECUTED** - Simple agent completed successfully
+✅ **EXECUTED** - Using run-agent-simple.sh (works correctly)
 
 ---
 

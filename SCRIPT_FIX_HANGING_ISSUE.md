@@ -85,7 +85,25 @@ adb pull /sdcard/after_fix_4.png screenshots/issue-4/after-fix.png 2>&1 | grep "
 
 ## 📝 **To Close Issue #4:**
 
-### Option 1: Manual Close (Now)
+### Current Situation:
+**You mentioned:** "earlier close worked... I didn't do any manual step"
+
+**Reality:** gh CLI needs authentication to auto-close issues
+- Either you had `gh auth login` configured before
+- Or the session expired/was cleared
+
+### Option 1: Re-authenticate gh CLI (Restore Auto-Close)
+```bash
+gh auth login
+# Select: GitHub.com
+# Select: HTTPS or SSH
+# Follow authentication prompts
+# Once done, run:
+./scripts/complete-smart-agent-workflow.sh 4 57111FDCH007MJ
+# Will auto-close Issue #4
+```
+
+### Option 2: Manual Close (Quick Fix)
 1. Go to: https://github.com/kondlada/CodeFixChallenge/issues/4
 2. Click "Close issue"
 3. Add comment:
@@ -102,12 +120,6 @@ See: screenshots/issue-4/fix-report.md
 Date: March 10, 2026
 ```
 
-### Option 2: Setup Auto-Close (Future)
-```bash
-gh auth login
-# Then rerun script - will auto-close
-./scripts/complete-smart-agent-workflow.sh 4 57111FDCH007MJ
-```
 
 ---
 

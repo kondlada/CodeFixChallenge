@@ -178,16 +178,44 @@ echo ""
 echo "🧪 PHASE 6: Running Test Automation"
 echo "===================================="
 
-./scripts/test-runner.sh > /tmp/agent-workflow/test_results.txt 2>&1
+# Run tests and capture results
+if ./scripts/test-runner.sh > /tmp/agent-workflow/test_results.txt 2>&1; then
+    TEST_EXIT_CODE=0
+else
+    TEST_EXIT_CODE=$?
+fi
 
-# Parse test results
-UNIT_TOTAL=$(grep -o "[0-9]* tests" /tmp/agent-workflow/test_results.txt | head -1 | awk '{print $1}' || echo "0")
-UNIT_PASSED=$UNIT_TOTAL  # Simplification - parse actual results
-UNIT_FAILED=0
-UNIT_COV=$(grep -o "[0-9]*%" /tmp/agent-workflow/test_results.txt | head -1 | tr -d '%' || echo "0")
+# Parse actual test results from Gradle output
+if [ -f "app/build/test-results/testDebugUnitTest/TEST-*.xml" ]; then
+    # Parse JUnit XML results
+    UNIT_TOTAL=$(grep -o 'tests="[0-9]*"' app/build/test-results/testDebugUnitTest/TEST-*.xml 2>/dev/null | head -1 | grep -o '[0-9]*' || echo "0")
+    UNIT_FAILED=$(grep -o 'failures="[0-9]*"' app/build/test-results/testDebugUnitTest/TEST-*.xml 2>/dev/null | head -1 | grep -o '[0-9]*' || echo "0")
+    UNIT_ERRORS=$(grep -o 'errors="[0-9]*"' app/build/test-results/testDebugUnitTest/TEST-*.xml 2>/dev/null | head -1 | grep -o '[0-9]*' || echo "0")
+    UNIT_PASSED=$((UNIT_TOTAL - UNIT_FAILED - UNIT_ERRORS))
+else
+    # Fallback to text parsing
+    UNIT_TOTAL=$(grep -o "[0-9]* tests" /tmp/agent-workflow/test_results.txt | head -1 | awk '{print $1}' || echo "0")
+    UNIT_FAILED=$(grep -o "[0-9]* failed" /tmp/agent-workflow/test_results.txt | head -1 | awk '{print $1}' || echo "0")
+    UNIT_PASSED=$((UNIT_TOTAL - UNIT_FAILED))
+fi
 
-echo "✅ Unit Tests: $UNIT_PASSED/$UNIT_TOTAL passed"
-echo "✅ Coverage: $UNIT_COV%"
+# Parse coverage
+if [ -f "app/build/reports/jacoco/jacocoTestReport/html/index.html" ]; then
+    UNIT_COV=$(grep -o 'Total[^>]*>[^>]*>[^>]*>[^>]*>[^>]*>[^0-9]*[0-9]*%' app/build/reports/jacoco/jacocoTestReport/html/index.html 2>/dev/null | grep -o '[0-9]*%' | head -1 | tr -d '%' || echo "0")
+else
+    UNIT_COV=$(grep -o "[0-9]*%" /tmp/agent-workflow/test_results.txt | head -1 | tr -d '%' || echo "0")
+fi
+
+# Display results
+if [ $UNIT_FAILED -eq 0 ] && [ $UNIT_TOTAL -gt 0 ]; then
+    echo "✅ Unit Tests: $UNIT_PASSED/$UNIT_TOTAL passed"
+    echo "✅ Coverage: $UNIT_COV%"
+    TESTS_PASSED=true
+else
+    echo "❌ Unit Tests: $UNIT_PASSED/$UNIT_TOTAL passed, $UNIT_FAILED failed"
+    echo "⚠️  Coverage: $UNIT_COV%"
+    TESTS_PASSED=false
+fi
 echo ""
 
 #=====================================================
@@ -291,12 +319,27 @@ echo ""
 echo "📤 PHASE 9: Publishing to GitHub"
 echo "================================="
 
+# Verify we should proceed
+CODE_CHANGED=false
+git diff --quiet HEAD -- app/ 2>/dev/null || CODE_CHANGED=true
+
+if [ "$CODE_CHANGED" = "false" ] && [ "$TESTS_PASSED" = "false" ]; then
+    echo "⚠️  WARNING: No code changes and tests failed"
+    echo "   Skipping commit - fix needs more work"
+    SKIP_COMMIT=true
+else
+    SKIP_COMMIT=false
+fi
+
 # Check if there are changes to commit
 git add screenshots/issue-$ISSUE_NUMBER/ 2>/dev/null || true
 git add automation-results/ 2>/dev/null || true
 git add app/ 2>/dev/null || true
+git add docs/ 2>/dev/null || true
 
-if git diff --cached --quiet; then
+if [ "$SKIP_COMMIT" = "true" ]; then
+    echo "⚠️  Skipping commit due to verification failure"
+elif git diff --cached --quiet; then
     echo "ℹ️  No new changes to commit (may be a re-run)"
     echo "   Previous changes already pushed"
 else
@@ -340,8 +383,29 @@ echo ""
 echo "🎯 PHASE 10: Closing Issue on GitHub"
 echo "====================================="
 
+# Determine if we should close the issue
+SHOULD_CLOSE=false
+
+if [ "$CODE_CHANGED" = "true" ] && [ "$TESTS_PASSED" = "true" ]; then
+    SHOULD_CLOSE=true
+    echo "✅ Verification passed: Code changed and tests passing"
+elif [ "$CODE_CHANGED" = "false" ] && [ -f "screenshots/issue-$ISSUE_NUMBER/fix-report.md" ]; then
+    echo "⚠️  No code changes, but documentation created"
+    echo "   Issue will be commented but not closed"
+else
+    echo "❌ Verification failed: Cannot close issue"
+    echo "   Code changed: $CODE_CHANGED"
+    echo "   Tests passed: $TESTS_PASSED"
+fi
+
 # Create detailed comment
-COMMENT="## ✅ FIXED AND VERIFIED
+if [ "$SHOULD_CLOSE" = "true" ]; then
+    COMMENT="## ✅ FIXED AND VERIFIED"
+else
+    COMMENT="## 🔍 ANALYSIS COMPLETE - NEEDS REVIEW"
+fi
+
+COMMENT="$COMMENT
 
 ### Automated Agent Workflow Completed
 
@@ -376,13 +440,21 @@ $CHANGED_FILES
 🤖 *This issue was automatically resolved by the agent workflow*
 *Timestamp: $(date -u +"%Y-%m-%d %H:%M:%S UTC")*"
 
-# Close issue with gh CLI
+# Close or comment on issue with gh CLI
 if command -v gh &> /dev/null; then
-    gh issue close $ISSUE_NUMBER --comment "$COMMENT" 2>&1
-    echo "✅ Issue #$ISSUE_NUMBER closed on GitHub"
+    if [ "$SHOULD_CLOSE" = "true" ]; then
+        gh issue close $ISSUE_NUMBER --comment "$COMMENT" 2>&1 && echo "✅ Issue #$ISSUE_NUMBER closed on GitHub" || echo "⚠️  Failed to close issue"
+    else
+        gh issue comment $ISSUE_NUMBER --body "$COMMENT" 2>&1 && echo "💬 Comment added to issue #$ISSUE_NUMBER" || echo "⚠️  Failed to comment"
+        echo "⚠️  Issue NOT closed - manual review required"
+    fi
 else
-    echo "⚠️  gh CLI not available, issue not closed automatically"
-    echo "   Run: gh issue close $ISSUE_NUMBER"
+    echo "⚠️  gh CLI not available"
+    if [ "$SHOULD_CLOSE" = "true" ]; then
+        echo "   Run: gh issue close $ISSUE_NUMBER"
+    else
+        echo "   Issue needs manual review before closing"
+    fi
 fi
 
 echo ""
@@ -399,16 +471,41 @@ echo "  ✅ Fetched from GitHub MCP"
 echo "  ✅ Before screenshot captured"
 echo "  ✅ Fix applied"
 echo "  ✅ After screenshot captured"
-echo "  ✅ Tests run ($UNIT_PASSED/$UNIT_TOTAL passed)"
-echo "  ✅ Results committed and pushed"
-echo "  ✅ Issue closed"
+if [ "$TESTS_PASSED" = "true" ]; then
+    echo "  ✅ Tests run ($UNIT_PASSED/$UNIT_TOTAL passed)"
+else
+    echo "  ⚠️  Tests run ($UNIT_PASSED/$UNIT_TOTAL passed, $UNIT_FAILED failed)"
+fi
+if [ "$SKIP_COMMIT" != "true" ]; then
+    echo "  ✅ Results committed and pushed"
+else
+    echo "  ⚠️  Commit skipped (verification failed)"
+fi
+if [ "$SHOULD_CLOSE" = "true" ]; then
+    echo "  ✅ Issue closed"
+else
+    echo "  ⚠️  Issue NOT closed (needs review)"
+fi
 echo ""
 echo "📁 Results Location:"
 echo "  - Screenshots: screenshots/issue-$ISSUE_NUMBER/"
 echo "  - Fix Report: screenshots/issue-$ISSUE_NUMBER/fix-report.md"
 echo "  - Test Chart: automation-results/test-chart-issue-$ISSUE_NUMBER.png"
+if [ -f "docs/fix-issue-$ISSUE_NUMBER.md" ]; then
+    echo "  - Fix Documentation: docs/fix-issue-$ISSUE_NUMBER.md"
+fi
 echo ""
 echo "🔗 GitHub: https://github.com/$REPO/issues/$ISSUE_NUMBER"
 echo ""
-echo "✨ ALL AUTOMATION COMPLETE!"
+if [ "$SHOULD_CLOSE" = "true" ]; then
+    echo "✨ ALL AUTOMATION COMPLETE - ISSUE RESOLVED!"
+else
+    echo "⚠️  AUTOMATION COMPLETE - MANUAL REVIEW REQUIRED"
+    echo ""
+    echo "Next Steps:"
+    echo "  1. Review the fix documentation"
+    echo "  2. Check test failures if any"
+    echo "  3. Apply additional fixes if needed"
+    echo "  4. Re-run workflow to verify"
+fi
 

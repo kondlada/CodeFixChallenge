@@ -1,0 +1,14 @@
+# AI Agent Dependencies
+# Install with: pip3 install -r requirements-ai.txt
+
+# Anthropic Claude API (Recommended)
+anthropic>=0.18.0
+
+# OpenAI GPT API (Alternative)
+openai>=1.12.0
+
+# Optional: For better JSON parsing
+jsonschema>=4.21.0
+
+# Optional: For code analysis
+tree-sitter>=0.20.0

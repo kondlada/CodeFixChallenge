@@ -107,27 +107,54 @@ else
     echo "Analyzing issue and generating fix recommendations..."
     echo ""
 
-    # Use simple fix agent
-    python3 scripts/simple-fix-agent.py \
-        --issue /tmp/agent-workflow/issue_data.json \
-        --mode auto \
-        2>&1 | tee /tmp/agent-workflow/fix_log.txt
+    # Try AI-powered fix first if API keys are available
+    if [ -n "$ANTHROPIC_API_KEY" ] || [ -n "$OPENAI_API_KEY" ]; then
+        echo "🧠 Attempting AI-powered fix generation..."
+        
+        if python3 scripts/ai-fix-agent.py \
+            --issue /tmp/agent-workflow/issue_data.json \
+            2>&1 | tee /tmp/agent-workflow/fix_log.txt; then
+            
+            echo ""
+            echo "✅ AI-powered fix applied"
+            FIX_RESULT=0
+        else
+            echo ""
+            echo "⚠️  AI fix failed, falling back to template-based fixes..."
+            
+            # Fallback to template-based fixes
+            python3 scripts/simple-fix-agent.py \
+                --issue /tmp/agent-workflow/issue_data.json \
+                --mode auto \
+                2>&1 | tee /tmp/agent-workflow/fix_log.txt
+            
+            FIX_RESULT=${PIPESTATUS[0]}
+        fi
+    else
+        echo "ℹ️  No AI API keys found, using template-based fixes"
+        echo "   Set ANTHROPIC_API_KEY or OPENAI_API_KEY for AI-powered fixes"
+        echo ""
+        
+        # Use template-based fix agent
+        python3 scripts/simple-fix-agent.py \
+            --issue /tmp/agent-workflow/issue_data.json \
+            --mode auto \
+            2>&1 | tee /tmp/agent-workflow/fix_log.txt
 
-    FIX_RESULT=${PIPESTATUS[0]}
+        FIX_RESULT=${PIPESTATUS[0]}
+    fi
 
     echo ""
     if [ $FIX_RESULT -eq 0 ]; then
-        echo "✅ Fix analysis complete"
+        echo "✅ Fix application complete"
         echo ""
         echo "📝 Next Steps:"
-        echo "   1. Review the suggested fixes above"
-        echo "   2. Apply changes to the codebase manually if needed"
-        echo "   3. Re-run this script to build, test, and deploy"
+        echo "   1. Review the applied fixes"
+        echo "   2. Proceeding to build and test..."
         echo ""
-        echo "   Or press Enter to continue with current code..."
-        read -t 10 || echo ""
+        sleep 2
     else
-        echo "⚠️  Fix analysis completed with notes"
+        echo "⚠️  Fix application completed with notes"
     fi
 fi
 echo ""
